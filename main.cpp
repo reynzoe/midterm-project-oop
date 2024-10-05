@@ -2,7 +2,6 @@
 #include <iomanip>
 #include <string>
 #include <cctype>  // For isdigit and tolower
-#include <algorithm> // For transform
 
 using namespace std;
 
@@ -71,8 +70,8 @@ private:
     Item* items[100]; // Max 100 items in inventory
     int itemCount;
 
-    // Custom swap function for swapping two Item pointers
-    void swap(Item* &item1, Item* &item2)
+    // Custom  function for sorting two Item pointers
+    void sorts(Item* &item1, Item* &item2)
     {
         Item* temp = item1;
         item1 = item2;
@@ -116,18 +115,39 @@ public:
         string id, name, category, quantityStr, priceStr;
         int quantity;
         double price;
+        bool isDuplicate = true;
 
-        // Input and validate category (case insensitive)
-        cout << "Enter Category (Clothing, Electronics, Entertainment): ";
-        cin >> category;
-        if (!isValidCategory(category))
+        // Input and validate category (case-insensitive, no numbers allowed)
+        do
         {
-            cout << "Category " << category << " does not exist!" << endl;
-            return;
+            cout << "Enter Category (Clothing, Electronics, Entertainment): ";
+            cin >> category;
+
+            // Check if category is valid (case-insensitive check and no numeric or special characters allowed)
+            if (!isValidCategory(category) || !isAlphaString(category))
+            {
+                cout << "Invalid category! Please enter 'Clothing', 'Electronics', or 'Entertainment' without any numbers or special characters." << endl;
+            }
+        } while (!isValidCategory(category) || !isAlphaString(category));
+
+        // Check for duplicate IDs
+        while (isDuplicate)
+        {
+            cout << "Enter Item ID: ";
+            cin >> id;
+
+            isDuplicate = false;  // Assume it's not a duplicate initially
+            for (int i = 0; i < itemCount; i++)  // Check all existing items
+            {
+                if (items[i]->getId() == id)  // If the ID already exists
+                {
+                    isDuplicate = true;  // Mark as duplicate and prompt again
+                    cout << "ERROR: An item already has that ID, please enter another ID.\n";
+                    break;
+                }
+            }
         }
 
-        cout << "Enter Item ID: ";
-        cin >> id;
         cout << "Enter Item Name: ";
         cin.ignore();
         getline(cin, name);
@@ -156,9 +176,24 @@ public:
         } while (!isValidNumericString(priceStr) || stod(priceStr) <= 0);
         price = stod(priceStr);
 
+        // Add the item to the inventory
         items[itemCount++] = new Item(id, name, quantity, price, toLowerCase(category));
         cout << "Item added successfully!" << endl;
     }
+
+// Helper function to check if a string contains only alphabetic characters
+    bool isAlphaString(const string &str)
+    {
+        for (char ch : str)
+        {
+            if (!isalpha(ch))  // Check if character is not alphabetic
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
 
     void updateItem()
     {
@@ -332,57 +367,95 @@ public:
 
     void sortItems()
     {
-        if (itemCount == 0)
+        if (itemCount == 0)  // Fix: Check if the item count is 0, not if the array is empty
         {
-            cout << "There are no items to sort!" << endl;
+            cout << "\nNo items to sort.\n";
             return;
         }
 
-        int sortChoice, order;
-        cout << "Sort by (1- Quantity, 2- Price): ";
-        cin >> sortChoice;
+        string choice;
+        string order;
 
-        if (sortChoice != 1 && sortChoice != 2)
+        cout << "\nSort by: \n1 - Quantity\n2 - Price\n";
+        cin >> choice;
+
+        while (choice != "1" && choice != "2")
         {
-            cout << "Invalid option! Try again." << endl;
-            return;
+            cout << "ERROR: input 1 or 2 only \n";
+            cout << "\nSort by: \n1 - Quantity\n2 - Price\n";
+            cin >> choice;
         }
 
-        cout << "Order (1- Ascending, 2- Descending): ";
+        cout << "\nSort order: \n1 - Ascending\n2 - Descending\n";
         cin >> order;
 
-        if (order != 1 && order != 2)
+        while (order != "1" && order != "2")
         {
-            cout << "Invalid order! Try again." << endl;
-            return;
+            cout << "ERROR: input 1 or 2 only \n";
+            cout << "\nSort order: \n1 - Ascending\n2 - Descending\n";
+            cin >> order;
         }
 
-        // Sorting based on the choice
+        bool ascending = (order == "1");
+
+        // Bubble Sort
         for (int i = 0; i < itemCount - 1; ++i)
         {
-            for (int j = i + 1; j < itemCount; ++j)
+            for (int j = 0; j < itemCount - i - 1; ++j)
             {
-                if (sortChoice == 1)
-                {
-                    if ((order == 1 && items[i]->getQuantity() > items[j]->getQuantity()) ||
-                        (order == 2 && items[i]->getQuantity() < items[j]->getQuantity()))
+                bool swapNeeded = false;
+
+                if (choice == "1")
+                { // Sort by Quantity
+                    if ((ascending && items[j]->getQuantity() > items[j + 1]->getQuantity()) ||
+                        (!ascending && items[j]->getQuantity() < items[j + 1]->getQuantity()))
                     {
-                        swap(items[i], items[j]); // Use custom swap
+                        swapNeeded = true;
                     }
                 }
-                else if (sortChoice == 2)
-                {
-                    if ((order == 1 && items[i]->getPrice() > items[j]->getPrice()) ||
-                        (order == 2 && items[i]->getPrice() < items[j]->getPrice()))
+                else if (choice == "2")
+                { // Sort by Price
+                    if ((ascending && items[j]->getPrice() > items[j + 1]->getPrice()) ||
+                        (!ascending && items[j]->getPrice() < items[j + 1]->getPrice()))
                     {
-                        swap(items[i], items[j]); // Use custom swap
+                        swapNeeded = true;
                     }
+                }
+
+                if (swapNeeded)
+                {
+                    swap(items[j], items[j + 1]);  // Use the custom swap function to swap the pointers
                 }
             }
         }
 
-        cout << "Items sorted successfully!" << endl;
+        // After sorting, display the sorted items
         displayAllItems();
+    }
+
+
+    void displaySortedItems()
+    {
+        cout << "\nSorted Items:\n";
+        cout << "------------------------------------------------------------\n";
+        cout << left << setw(10) << "ID"
+             << left << setw(40) << "Name"
+             << right << setw(10) << "Quantity"
+             << right << setw(10) << "Price"
+             << right << setw(20) << "Category" << endl;
+
+        cout << "------------------------------------------------------------\n";
+
+        for (const auto &item : items)
+        {
+            cout << left << setw(10) << item->getId()
+                 << left << setw(40) << item->getName()
+                 << right << setw(10) << item->getQuantity()
+                 << right << setw(10) << fixed << setprecision(2) << item->getPrice()
+                 << right << setw(20) << item->getCategory() << endl;
+        }
+
+        cout << "------------------------------------------------------------\n";
     }
 
     // Function to search for an item by ID or name
@@ -445,9 +518,10 @@ public:
 int main()
 {
     Inventory inventory;
+    bool running = true;
     int choice;
 
-    do
+    while (running)
     {
         cout << "\nMenu\n";
         cout << "1 - Add Item\n";
@@ -461,7 +535,6 @@ int main()
         cout << "9 - Exit\n";
         cout << "Enter your choice: ";
 
-        // Validate input to avoid looping on invalid entries like '1b' or '3q'
         cin >> choice;
 
         if (cin.fail())  // Check if the input was invalid
@@ -500,11 +573,13 @@ int main()
                 break;
             case 9:
                 cout << "Exiting..." << endl;
+                running = false;  // Set running to false to exit the loop
                 break;
             default:
                 cout << "Invalid choice! Please try again." << endl;
         }
-    } while (choice != 9);
+    }
 
     return 0;
 }
+
